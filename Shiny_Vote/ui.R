@@ -8,10 +8,10 @@ library(jsonlite)
 library(magrittr)
 
 
-shinyUI(fluidPage(
+shinyUI(fluidPage(theme = "main.css",
   
   # TITLE
-  titlePanel("Discover the power of one"),
+  titlePanel("Discover the Power of One"),
   
   
   # SIDEBAR

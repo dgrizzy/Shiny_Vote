@@ -1,0 +1,27 @@
+@font-face {
+    font-family: "TT.Commons";
+    src: url("TT.Commons/TTCommons-Regular.ttf");
+}
+
+@font-face {
+    font-family: "TT.Bold";
+    src: url("TT.Commons/TTCommons-Bold.ttf");
+}
+
+body {
+  font-family: 'TT.Commons';
+  color: #7c8087;
+}
+
+h2 {
+  font-family: 'TT.Bold';
+  font-size: 50px;
+}
+
+.item {
+  color: #7c8087;
+}
+
+#Freinds {
+  color: #7c8087;
+}
