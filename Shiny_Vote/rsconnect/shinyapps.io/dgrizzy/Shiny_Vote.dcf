@@ -1,12 +1,12 @@
 name: Shiny_Vote
-title: Shiny_Vote
+title:
 username:
 account: dgrizzy
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 387593
-bundleId: 1507496
+bundleId: 1508061
 url: https://dgrizzy.shinyapps.io/Shiny_Vote/
-when: 1532963444.7541
+when: 1532985157.05014
 asMultiple: FALSE
 asStatic: FALSE

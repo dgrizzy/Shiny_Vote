@@ -26,16 +26,13 @@ shinyUI(fluidPage(theme = "main.css",
                         "Gen Z Impact Opportunity"
                         )),
       
-      # Add a Rule
-      tags$hr(),
-      
       
       # Input for the state of focus
       uiOutput("StateChoices"),
       
       # Input for Number of Freinds
       numericInput(inputId = "Freinds", 
-                   label = "How social media friends do you have?", 
+                   label = "How many social media friends do you have?", 
                    value = 300,
                    min = 1, 
                    max = 1000, 
@@ -62,3 +59,4 @@ shinyUI(fluidPage(theme = "main.css",
     )
   )
 ))
+
