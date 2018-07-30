@@ -1,0 +1,207 @@
+---
+title: "Vote Shiny"
+author: "David Griswold"
+date: "7/25/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load Libraries
+```{r}
+library(tidyverse)
+library(jsonlite)
+library(rvest)
+library(magrittr)
+```
+
+# Cencus Data
+
+## Read Data
+```{r}
+rawdemographicsData <- read_excel("poupByAge.xls")
+```
+
+## Create New Name Vector
+```{r}
+stateNames <- rawdemographicsData$STATE[!is.na(rawdemographicsData$STATE)]
+
+correctStateNames <- c()
+
+for (i in stateNames){
+  correctStateNames <- c(correctStateNames, rep(i, 6))
+}
+
+rawdemographicsData$STATE <- correctStateNames
+
+demographicsData <- rawdemographicsData
+
+rm(i, correctStateNames, stateNames)
+```
+
+## Filter Our Data
+```{r}
+demographicsData %<>% filter(Age == "18 to 24")
+```
+
+## Delete Unecessary Columns
+```{r}
+demographicsData %<>% select(c("STATE", "Total Citizen Population", "Total registered", "Total voted")) 
+
+names(demographicsData) <- c("State", "Poupulation", "Regestered_Voters", "Total_Voted")
+```
+
+## Type Conversions
+```{r}
+# Types good to go, will lowercase the state names
+demographicsData$State %<>% str_to_title()
+```
+
+# Varible Manipulation
+```{r}
+demographicsData %<>% mutate(Percent_Regest = round(Regestered_Voters / Poupulation * 100, digits =2), 
+                            Percent_Voting_Poup = round(Total_Voted / Poupulation * 100, digits =2),
+                            Percent_Voting_Regest = round(Total_Voted / Regestered_Voters* 100, digits =2),
+                            Num_Not_Voting = round(Poupulation * (1 - Percent_Voting_Poup / 100)))
+
+```
+
+## Drop US
+```{r}
+nationalData <- demographicsData[demographicsData$State == "Us",]
+
+
+demographicsData <- demographicsData[!demographicsData$State == "Us",]
+```
+
+# Write Out
+```{r}
+write_csv(demographicsData, "demographicsData.csv")
+```
+
+
+# Scraping Voting Results
+
+## Pull in Webpage Data
+```{r}
+base_url <- "https://www.politico.com/mapdata-2016/2016-election/results/map/president/"
+
+ourElements <- ".timeline-group"
+
+webpage <- read_html(base_url) %>% html_nodes(ourElements)
+```
+
+## Create Function for Cleaning Data
+```{r}
+cleanRow <- function (node) {
+  
+  stateName <- node %>% html_nodes(".timeline-header") %>% html_text() %>% str_trim()
+  
+  voteData <- node %>% html_node(".results-table") %>% html_table(fill = TRUE)
+  
+  return(list(state = stateName, data = voteData))
+  
+}
+```
+
+
+## Loop Function Over Function
+```{r}
+cleanedData <- map(webpage, function (x) cleanRow(x))
+  
+State <- map_chr(cleanedData, function(x) x$state)
+
+clintonVotes <- map_chr(cleanedData, function(x) {
+  
+  ourData <- x$data
+  
+  index <- str_which(ourData$X1, "Clinton")
+  
+  return(ourData$X3[index])
+})
+
+trumpVotes <- map_chr(cleanedData, function(x) {
+  
+  ourData <- x$data
+  
+  index <- str_which(ourData$X1, "Trump")
+  
+  return(ourData$X3[index])
+})
+
+
+clintonPercent <- map_chr(cleanedData, function(x) {
+  
+  ourData <- x$data
+  
+  index <- str_which(ourData$X1, "Clinton")
+  
+  return(ourData$X2[index])
+})
+
+trumpPercent <- map_chr(cleanedData, function(x) {
+  
+  ourData <- x$data
+  
+  index <- str_which(ourData$X1, "Trump")
+  
+  return(ourData$X2[index])
+})
+
+voteData <- data.frame(State, 
+                       clintonVotes,
+                       trumpVotes,
+                       clintonPercent,
+                       trumpPercent)
+
+
+```
+
+## Clean Frame
+```{r}
+voteData$clintonVotes %<>% str_replace_all(",", "") %>% as.numeric()
+voteData$trumpVotes %<>% str_replace_all(",", "") %>% as.numeric()
+
+voteData$clintonPercent %<>% str_replace_all("%", "") %>% as.numeric()
+voteData$trumpPercent %<>% str_replace_all("%", "") %>% as.numeric()
+
+voteData$State %<>% as.character() %>% str_to_title()
+```
+
+## Add In Row for 
+
+## Write Out To CSV
+```{r}
+write_csv(voteData, "PresVotesByState2016.csv")
+```
+
+# Combind Frames
+
+## Merge Sets
+```{r}
+overallDataset <- inner_join(voteData, demographicsData, by = "State") %>%
+   rbind(c("Puerto Rico",rep(0, 10))) # Adding a row for Puerto Rico
+```
+
+## Change Types
+```{r}
+states <- select(overallDataset, State)
+overallDataset <- bind_cols(states, map_df(overallDataset[,2:ncol(overallDataset)], as.numeric))
+```
+
+## Add Varibles
+```{r}
+# Add Margin
+overallDataset <- overallDataset %>% 
+  mutate(Margin = round(trumpPercent - clintonPercent,2),
+         GenZ_Power = abs(Margin) * Percent_Voting_Poup)
+```
+
+## Write Out  
+```{r}
+write_csv(overallDataset, file.path("Shiny_Vote", "VoteAndYouthTurnoutData2016.csv"))
+```
+
+
